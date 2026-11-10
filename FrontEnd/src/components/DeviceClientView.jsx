@@ -281,11 +281,20 @@ export default function DeviceClientView({
       >
         <div className="flex items-center gap-3">
           <button
-            onClick={onBackToDashboard}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white text-xs font-semibold border border-slate-700/80 backdrop-blur-md transition shadow"
+            onClick={() => {
+              if (window.opener && !window.opener.closed) {
+                window.close();
+              } else if (onBackToDashboard) {
+                onBackToDashboard();
+              } else {
+                window.location.href = '/dashboard';
+              }
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white text-xs font-semibold border border-slate-700/80 backdrop-blur-md transition shadow cursor-pointer"
+            title="Tutup atau kembali ke panel admin"
           >
             <ArrowLeft className="w-4 h-4 text-emerald-400" />
-            Kembali ke Halaman Utama
+            {window.opener ? 'Tutup Tab / Ke Dasbor' : 'Kembali ke Dasbor'}
           </button>
 
           <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-700/80 px-3 py-1.5 rounded-xl backdrop-blur-md">

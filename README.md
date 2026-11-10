@@ -26,7 +26,7 @@ Salin file environment:
 ```bash
 cp .env.example .env
 ```
-> **Tips:** Isi `SUPABASE_URL` dan `SUPABASE_ANON_KEY` Anda di `.env`. Jika belum disiapkan, server tetap bisa berjalan menggunakan data mock cadangan.
+> **Tips:** File `.env.example` sudah dilengkapi kredensial Supabase aktif siap pakai, sehingga penguji bisa langsung menguji koneksi database secara instan (*plug-and-play*). Skema SQL mandiri juga tersedia di `BackEnd/schema.sql` jika ingin menggunakan database Supabase sendiri.
 
 Nyalakan server:
 ```bash

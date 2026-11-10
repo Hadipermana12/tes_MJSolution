@@ -106,6 +106,7 @@ export default function Sidebar({
       label: 'Tonton di TV',
       icon: Tv,
       badge: 'Live',
+      openNewTab: true,
       gradient: 'from-teal-400 to-emerald-600',
       shadow: 'shadow-teal-500/25',
       lightBg: 'bg-teal-50 text-teal-600',
@@ -334,6 +335,35 @@ export default function Sidebar({
                         </span>
                       )}
                     </button>
+                  ) : item.openNewTab ? (
+                    <a
+                      href={item.path}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => onCloseMobile && onCloseMobile()}
+                      className="w-full flex items-center justify-between px-3 py-2 text-teal-100 hover:text-white hover:bg-white/10 rounded-2xl text-xs font-semibold transition-all text-left group cursor-pointer"
+                      title="Buka Layar Player di Tab Baru"
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        <div
+                          className={`w-8 h-8 rounded-xl bg-gradient-to-br ${item.gradient} text-white flex items-center justify-center shadow-sm opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all shrink-0`}
+                        >
+                          <Icon className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="truncate tracking-wide text-teal-50 group-hover:text-white font-medium">
+                          {item.label}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {item.badge !== null && item.badge !== undefined && (
+                          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-white/15 text-teal-100">
+                            {item.badge}
+                          </span>
+                        )}
+                        <ExternalLink className="w-3.5 h-3.5 text-teal-200/70 group-hover:text-amber-300 transition-colors" />
+                      </div>
+                    </a>
                   ) : (
                     <Link
                       to={item.path || '/dashboard'}
@@ -396,15 +426,16 @@ export default function Sidebar({
                 {onlineDevicesCount > 0 ? `${onlineDevicesCount} Layar Siap Siar` : 'Standby Mode'}
               </span>
 
-              <Link
-                to="/player"
-                onClick={() => setCurrentView('client')}
+              <a
+                href="/player"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-[10px] font-bold text-amber-300 hover:text-white transition flex items-center gap-1 cursor-pointer"
-                title="Buka Player Fullscreen"
+                title="Buka Player Fullscreen di Tab Baru"
               >
                 <span>Live TV</span>
                 <ExternalLink className="w-3 h-3 text-amber-300" />
-              </Link>
+              </a>
             </div>
           </div>
 

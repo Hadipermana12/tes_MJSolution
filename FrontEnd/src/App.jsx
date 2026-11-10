@@ -66,10 +66,13 @@ function App() {
       setCurrentView(targetView);
     }
     // Jika path /player/:deviceId, pasang device aktif yang sesuai
-    if (path.startsWith('/player/')) {
-      const devId = path.replace('/player/', '');
-      const found = devices.find((d) => d.id === devId);
-      if (found) setActivePlayerDevice(found);
+    if (path.startsWith('/player')) {
+      const match = path.match(/^\/player\/([^/?#]+)/);
+      const devId = match ? decodeURIComponent(match[1]) : null;
+      if (devId) {
+        const found = devices.find((d) => d.id === devId);
+        if (found) setActivePlayerDevice(found);
+      }
     }
   }, [path, devices]);
 
@@ -444,12 +447,11 @@ function App() {
     }
   };
 
-  // ── OPEN SIGNAGE PLAYER VIEW ────────────────────────────────────────
+  // ── OPEN SIGNAGE PLAYER VIEW IN NEW BROWSER TAB ────────────────────
   const handleOpenClientView = (device) => {
     const dev = device || devices[0];
-    setActivePlayerDevice(dev);
-    setCurrentView('client');
-    navigate(dev?.id ? `/player/${dev.id}` : '/player');
+    const targetUrl = dev?.id ? `/player/${dev.id}` : '/player';
+    window.open(targetUrl, '_blank');
   };
 
   const handleLogout = () => {
@@ -464,8 +466,11 @@ function App() {
     });
   };
 
+  // ── Cek apakah rute adalah player TV (layar display publik, tidak di-lock login admin) ──
+  const isPlayerRoute = path.startsWith('/player') || path === '/client' || currentView === 'client';
+
   // ── Protected Route: Tampilkan LoginPage jika di route /login atau belum login dan bukan mode guest ──
-  const isLoginPage = path === '/login' || (authChecked && !currentUser && !isGuest);
+  const isLoginPage = !isPlayerRoute && (path === '/login' || (authChecked && !currentUser && !isGuest));
 
   if (isLoginPage) {
     return (
@@ -500,12 +505,21 @@ function App() {
     );
   }
 
+  // ── Ekstrak Device ID dari rute player (misal: /player/dev-002) ───────────
+  const playerMatch = path.match(/^\/player\/([^/?#]+)/);
+  const playerDeviceId = playerMatch ? decodeURIComponent(playerMatch[1]) : null;
+  const currentActivePlayerDevice =
+    (playerDeviceId && devices.find((d) => d.id === playerDeviceId)) ||
+    activePlayerDevice ||
+    (playerDeviceId ? { id: playerDeviceId } : devices[0]);
+
   // If in client/player view mode
-  if (currentView === 'client') {
+  if (isPlayerRoute || currentView === 'client') {
     return (
       <DeviceClientView
         devices={devices}
-        activeDevice={activePlayerDevice || devices[0]}
+        activeDevice={currentActivePlayerDevice}
+        initialDeviceId={playerDeviceId || activePlayerDevice?.id}
         onBackToDashboard={() => handleViewChange('dashboard')}
         runningTicker={runningTicker}
       />
