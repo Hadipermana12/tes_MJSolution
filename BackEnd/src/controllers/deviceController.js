@@ -167,6 +167,51 @@ export const getDeviceById = async (req, res) => {
   return res.json(found);
 };
 
+// GET /api/devices/:id/current-content
+export const getCurrentContent = async (req, res) => {
+  const { id } = req.params;
+
+  let device = null;
+  if (isConfigured()) {
+    try {
+      const { data } = await supabase
+        .from('devices')
+        .select(`id, nama, active_content:contents(id, judul, tipe, payload)`)
+        .eq('id', id)
+        .maybeSingle();
+      if (data) device = data;
+    } catch (e) {}
+  }
+
+  if (!device && checkDbStatus()) {
+    try {
+      const query = `
+        SELECT d.id, d.nama,
+          CASE WHEN c.id IS NOT NULL THEN json_build_object('id', c.id, 'judul', c.judul, 'tipe', c.tipe, 'payload', c.payload) ELSE NULL END AS active_content
+        FROM devices d
+        LEFT JOIN contents c ON d.active_content_id = c.id
+        WHERE d.id = $1;
+      `;
+      const { rows } = await pool.query(query, [id]);
+      if (rows.length > 0) device = rows[0];
+    } catch (e) {}
+  }
+
+  if (!device) {
+    device = memoryDevices.find((d) => d.id === id);
+  }
+
+  if (!device) {
+    return res.status(404).json({ active: false, message: 'Device tidak ditemukan' });
+  }
+
+  const content = device.active_content || null;
+  return res.json({
+    active: Boolean(content),
+    content
+  });
+};
+
 // POST /api/devices
 export const createDevice = async (req, res) => {
   const { nama, lokasi, active_content_id } = req.body;

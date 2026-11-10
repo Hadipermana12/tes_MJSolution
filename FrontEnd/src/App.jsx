@@ -627,6 +627,8 @@ function App() {
           {currentView === 'media' && (
             <ContentManagement
               contents={contents}
+              devices={devices}
+              onPushContent={handlePushContent}
               onOpenAddModal={() => setIsContentModalOpen(true)}
               onDeleteContent={handleDeleteContent}
               externalSearch={globalSearch}

@@ -11,17 +11,23 @@ import {
   X,
   Play,
   Layers,
-  Search
+  Search,
+  Send,
+  Tv
 } from 'lucide-react';
+import PushToDeviceModal from './PushToDeviceModal';
 
 export default function ContentManagement({
   contents = [],
+  devices = [],
+  onPushContent,
   onOpenAddModal,
   onDeleteContent,
   externalSearch = ''
 }) {
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'image' | 'video' | 'url'
   const [previewItem, setPreviewItem] = useState(null);
+  const [pushItem, setPushItem] = useState(null);
 
   // Filter berdasarkan pencarian global dan tab filter
   const filteredContents = contents.filter((item) => {
@@ -234,23 +240,34 @@ export default function ContentManagement({
                     </p>
                   </div>
 
-                  {/* Action Buttons: Preview & Hapus */}
-                  <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between">
+                  {/* Action Buttons: Preview, Tayangkan ke TV & Hapus */}
+                  <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between gap-1.5">
                     <button
                       onClick={() => setPreviewItem(item)}
-                      className="text-xs font-bold text-slate-600 hover:text-[#0D8F83] flex items-center gap-1 transition cursor-pointer"
+                      className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 transition cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Pratinjau</span>
                     </button>
 
-                    <button
-                      onClick={() => onDeleteContent(item.id)}
-                      className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                      title="Hapus Konten"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setPushItem(item)}
+                        className="px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-[#0D8F83] text-[#0D8F83] hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs"
+                        title="Tayangkan konten ini ke layar TV"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Tayangkan</span>
+                      </button>
+
+                      <button
+                        onClick={() => onDeleteContent(item.id)}
+                        className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                        title="Hapus Konten"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -322,18 +339,40 @@ export default function ContentManagement({
               )}
             </div>
 
-            <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
               <span>Tipe: <strong className="text-slate-800 capitalize">{previewItem.tipe}</strong></span>
-              <button
-                onClick={() => setPreviewItem(null)}
-                className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition cursor-pointer"
-              >
-                Tutup
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const target = previewItem;
+                    setPreviewItem(null);
+                    setPushItem(target);
+                  }}
+                  className="px-3.5 py-1.5 bg-[#0D8F83] hover:bg-[#0A7369] text-white font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Tayangkan ke TV</span>
+                </button>
+                <button
+                  onClick={() => setPreviewItem(null)}
+                  className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition cursor-pointer"
+                >
+                  Tutup
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* ── Modal Tayangkan Konten ke Layar TV ── */}
+      <PushToDeviceModal
+        isOpen={Boolean(pushItem)}
+        onClose={() => setPushItem(null)}
+        content={pushItem}
+        devices={devices}
+        onPush={onPushContent}
+      />
     </div>
   );
 }

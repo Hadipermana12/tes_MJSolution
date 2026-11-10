@@ -9,12 +9,23 @@ import { api, apiClient } from '../services/api';
 export default function DeviceClientView({
   devices = [],
   activeDevice,
+  initialDeviceId,
   onBackToDashboard,
   runningTicker
 }) {
-  const [selectedDeviceId, setSelectedDeviceId] = useState(
-    activeDevice?.id || devices[0]?.id || 'dev-001'
-  );
+  // Helper to extract device ID from pathname e.g. /player/dev-002
+  const getDeviceIdFromUrl = () => {
+    if (typeof window !== 'undefined') {
+      const match = window.location.pathname.match(/\/player\/([^/?#]+)/);
+      if (match && match[1]) return decodeURIComponent(match[1]);
+    }
+    return null;
+  };
+
+  const resolvedInitialId =
+    initialDeviceId || getDeviceIdFromUrl() || activeDevice?.id || devices[0]?.id || 'dev-001';
+
+  const [selectedDeviceId, setSelectedDeviceId] = useState(resolvedInitialId);
   const [currentDevice, setCurrentDevice] = useState(activeDevice || null);
   const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -74,29 +85,60 @@ export default function DeviceClientView({
     setIsPlaylist(false);
     setPlaylistItems([]);
     setSlideIndex(0);
-    setSingleContent(content);
+    let parsed = content;
+    if (typeof content === 'string') {
+      try {
+        parsed = JSON.parse(content);
+      } catch (e) {}
+    }
+    setSingleContent(parsed);
   }, []);
 
-  // ── Fetch device detail + konten terakhir ──────────────────────
+  // ── Sinkronisasi bila initialDeviceId / activeDevice berubah ──
+  useEffect(() => {
+    const urlId = getDeviceIdFromUrl();
+    const targetId = initialDeviceId || urlId || activeDevice?.id;
+    if (targetId && targetId !== selectedDeviceId) {
+      setSelectedDeviceId(targetId);
+    }
+  }, [initialDeviceId, activeDevice?.id]);
+
+  // ── Tampilkan langsung active_content bila data device sudah ada di memori ──
+  useEffect(() => {
+    if (!selectedDeviceId) return;
+
+    const matched =
+      (activeDevice && activeDevice.id === selectedDeviceId ? activeDevice : null) ||
+      devices.find((d) => d.id === selectedDeviceId);
+
+    if (matched) {
+      setCurrentDevice(matched);
+      if (matched.active_content) {
+        if (matched.active_content.type === 'playlist' && Array.isArray(matched.active_content.items)) {
+          activatePlaylist(matched.active_content.items);
+        } else {
+          activateSingle(matched.active_content);
+        }
+      }
+    }
+  }, [selectedDeviceId, activeDevice, devices, activatePlaylist, activateSingle]);
+
+  // ── Fetch device detail + konten terakhir dari server ──────────
   const fetchDeviceDetails = async (deviceId) => {
+    if (!deviceId) return;
     setLoading(true);
     try {
       const data = await api.getDeviceById(deviceId);
       if (data) {
         setCurrentDevice(data);
-      }
-
-      // Cek apakah ada playlist/konten terakhir yang di-push
-      const res = await apiClient.get(`/devices/${deviceId}/current-content`);
-      if (res.data?.active && res.data.content) {
-        const content = res.data.content;
-        if (content.type === 'playlist' && Array.isArray(content.items) && content.items.length > 0) {
-          activatePlaylist(content.items);
-        } else if (content.judul) {
-          activateSingle(content);
+        if (data.active_content) {
+          const content = data.active_content;
+          if (content.type === 'playlist' && Array.isArray(content.items) && content.items.length > 0) {
+            activatePlaylist(content.items);
+          } else {
+            activateSingle(content);
+          }
         }
-      } else if (data?.active_content) {
-        activateSingle(data.active_content);
       }
     } catch (err) {
       console.warn('Gagal memuat detail device:', err);
@@ -109,6 +151,14 @@ export default function DeviceClientView({
     fetchDeviceDetails(selectedDeviceId);
     return () => clearTimeout(timerRef.current);
   }, [selectedDeviceId]);
+
+  // ── Handler ganti device via dropdown ─────────────────────────
+  const handleSelectDevice = (newId) => {
+    setSelectedDeviceId(newId);
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/player')) {
+      window.history.replaceState(null, '', `/player/${newId}`);
+    }
+  };
 
   // ── WebSocket ──────────────────────────────────────────────────
   useEffect(() => {
@@ -301,14 +351,24 @@ export default function DeviceClientView({
             <Tv className="w-3.5 h-3.5 text-emerald-400" />
             <select
               value={selectedDeviceId}
-              onChange={(e) => setSelectedDeviceId(e.target.value)}
+              onChange={(e) => handleSelectDevice(e.target.value)}
               className="bg-transparent text-white text-xs font-medium focus:outline-none cursor-pointer"
             >
-              {devices.map((d) => (
-                <option key={d.id} value={d.id} className="bg-slate-900 text-white">
-                  {d.nama} ({d.lokasi})
+              {devices.length > 0 ? (
+                devices.map((d) => (
+                  <option key={d.id} value={d.id} className="bg-slate-900 text-white">
+                    {d.nama} ({d.lokasi})
+                  </option>
+                ))
+              ) : currentDevice ? (
+                <option value={currentDevice.id} className="bg-slate-900 text-white">
+                  {currentDevice.nama || currentDevice.id} ({currentDevice.lokasi || 'Terpilih'})
                 </option>
-              ))}
+              ) : (
+                <option value={selectedDeviceId} className="bg-slate-900 text-white">
+                  {selectedDeviceId}
+                </option>
+              )}
             </select>
           </div>
 
