@@ -57,6 +57,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Sinkronisasi otomatis bila URL browser berubah via Back / Forward (popstate)
   useEffect(() => {
@@ -75,6 +76,7 @@ function App() {
   // Handler pergantian tampilan yang otomatis mengubah URL rute browser
   const handleViewChange = (view, targetPath = null) => {
     setCurrentView(view);
+    setIsMobileSidebarOpen(false);
     const destination = targetPath || viewToPath(view);
     navigate(destination);
   };
@@ -476,7 +478,7 @@ function App() {
             showAlert({
               type: 'success',
               title: `Selamat Datang, ${user.username}!`,
-              message: 'Autentikasi JWT berhasil! Selamat datang kembali di MJ Signage CMS.'
+              message: 'Selamat datang kembali di MJ Signage CMS.'
             });
           }}
           onGuestAccess={() => {
@@ -484,8 +486,8 @@ function App() {
             handleViewChange('dashboard');
             showAlert({
               type: 'info',
-              title: 'Mode Pratinjau Tamu',
-              message: 'Anda masuk dalam mode pratinjau. Anda dapat melihat dashboard dan mencoba fitur CMS.'
+              title: 'Mode Pratinjau',
+              message: 'Anda masuk dalam mode pratinjau untuk menjelajahi fitur CMS.'
             });
           }}
         />
@@ -512,7 +514,7 @@ function App() {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-white text-slate-800 flex font-sans antialiased">
-      {/* ── Left Modern CMS Sidebar (Fixed Independent Scroll) ── */}
+      {/* ── Left Modern CMS Sidebar (Responsive Mobile Drawer + Desktop Fixed) ── */}
       <Sidebar
         currentView={currentView}
         setCurrentView={handleViewChange}
@@ -525,10 +527,54 @@ function App() {
         onlineDevicesCount={devices.filter((d) => d.status === 'online').length}
         contentsCount={contents.length}
         playlistsCount={playlists.length}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
-      {/* ── Main Content Area (Independent Scrollable Container) ── */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto bg-white">
+      {/* ── Main Content Area (Modern Pearl-Mint Canvas with Rich Motif Details) ── */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto bg-gradient-to-br from-[#F5F9F8] via-[#EFF6F4] to-[#E8F3F1] relative">
+        {/* ── Motif 1: Precision Blueprint Tech Grid Pattern (Clearly Visible & Elegant) ── */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-100"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, rgba(13, 143, 131, 0.05) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(13, 143, 131, 0.05) 1px, transparent 1px),
+              radial-gradient(circle at 1px 1px, rgba(13, 143, 131, 0.16) 1.5px, transparent 0)
+            `,
+            backgroundSize: '36px 36px, 36px 36px, 36px 36px'
+          }}
+        />
+
+        {/* ── Motif 2: Architectural Topographic Contour Lines SVG Motif ── */}
+        <svg
+          className="absolute top-0 right-0 w-[550px] h-[550px] opacity-[0.09] pointer-events-none"
+          viewBox="0 0 600 600"
+          fill="none"
+        >
+          <path d="M100 0 C 250 180, 380 60, 600 220" stroke="#0D8F83" strokeWidth="2.5" strokeDasharray="6 6" />
+          <path d="M0 140 C 220 320, 420 140, 600 340" stroke="#0D8F83" strokeWidth="1.8" />
+          <path d="M60 280 C 260 460, 460 240, 600 480" stroke="#0D8F83" strokeWidth="2" strokeDasharray="4 4" />
+          <circle cx="460" cy="200" r="160" stroke="#0D8F83" strokeWidth="1.5" strokeDasharray="8 6" />
+          <circle cx="460" cy="200" r="100" stroke="#0D8F83" strokeWidth="1.2" />
+          <circle cx="460" cy="200" r="40" stroke="#0D8F83" strokeWidth="1" strokeDasharray="3 3" />
+        </svg>
+
+        {/* ── Motif 3: Bottom Left Wave Contour Accent ── */}
+        <svg
+          className="absolute bottom-0 left-0 w-[450px] h-[400px] opacity-[0.07] pointer-events-none"
+          viewBox="0 0 500 450"
+          fill="none"
+        >
+          <path d="M-50 400 C 150 250, 300 450, 500 250" stroke="#0D8F83" strokeWidth="2" strokeDasharray="5 5" />
+          <path d="M-50 320 C 120 180, 260 380, 500 180" stroke="#0D8F83" strokeWidth="1.5" />
+          <circle cx="120" cy="350" r="90" stroke="#0D8F83" strokeWidth="1" strokeDasharray="6 6" />
+        </svg>
+
+        {/* ── Motif 4: Ambient Soft Aurora Glow Orbs ── */}
+        <div className="absolute top-10 right-20 w-[450px] h-[450px] bg-teal-400/12 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-20 left-10 w-[400px] h-[400px] bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
+
         {/* Top Header Bar (Sticky at top of content area) */}
         <TopHeader
           currentView={currentView}
@@ -540,10 +586,11 @@ function App() {
           searchTerm={globalSearch}
           setSearchTerm={setGlobalSearch}
           currentUser={currentUser}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
         />
 
         {/* Content Body Container */}
-        <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">
+        <main className="flex-1 p-3.5 sm:p-6 md:p-8 max-w-7xl w-full mx-auto space-y-5 sm:space-y-6 relative z-10">
           {currentView === 'dashboard' && (
             <CmsOverview
               devices={devices}
@@ -619,7 +666,7 @@ function App() {
         </main>
 
         {/* Aesthetic Footer */}
-        <footer className="py-4 text-center text-xs text-slate-400 border-t border-slate-100 select-none bg-white/50">
+        <footer className="py-4 text-center text-xs text-slate-400 border-t border-slate-200/70 select-none bg-white/70 backdrop-blur-xs relative z-10">
           MJ Solution Indonesia &bull; Enterprise Digital Signage CMS &bull; Real-time WebSocket + Cloud Engine
         </footer>
       </div>

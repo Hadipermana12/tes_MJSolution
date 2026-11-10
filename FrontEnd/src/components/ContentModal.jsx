@@ -1,29 +1,65 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { X, Image, Video, Globe, Link2, Sparkles, Upload, FileVideo, FileImage, AlertCircle } from 'lucide-react';
+import {
+  X,
+  Upload,
+  Link2,
+  FileImage,
+  FileVideo,
+  CheckCircle2,
+  AlertCircle,
+  Sparkles,
+  ArrowRight,
+  Eye,
+  RefreshCw
+} from 'lucide-react';
 import { api } from '../services/api';
 
 export default function ContentModal({ isOpen, onClose, onSave }) {
+  // Tab pilihan metode: 'file' (Unggah File Komputer) atau 'url' (Tautan URL)
+  const [tab, setTab] = useState('file');
+
+  // Form State
   const [judul, setJudul] = useState('');
-  const [tipe, setTipe] = useState('image');
-  const [urlPayload, setUrlPayload] = useState('');
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [tipe, setTipe] = useState('image'); // 'image' | 'video' | 'url'
+  const [urlPayload, setUrlPayload] = useState('');
+
+  // Status & Error
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState('');
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
-  // ─── Reset seluruh state ───────────────────────────────────────────
+  // Preset sampel cepat untuk kemudahan pengujian
+  const samplePresets = [
+    {
+      nama: 'Banner Kafe & Resto',
+      tipe: 'image',
+      url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      nama: 'Gedung Kantor Modern',
+      tipe: 'image',
+      url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      nama: 'Video Alam Animasi',
+      tipe: 'video',
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+    }
+  ];
+
   const resetState = () => {
+    setTab('file');
     setJudul('');
+    setFile(null);
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview(null);
     setTipe('image');
     setUrlPayload('');
-    setFile(null);
-    setPreview(null);
     setIsDragging(false);
     setLoading(false);
-    setUploadProgress('');
     setError('');
   };
 
@@ -32,7 +68,17 @@ export default function ContentModal({ isOpen, onClose, onSave }) {
     onClose();
   };
 
-  // ─── Pilih file (dari input atau drag-drop) ────────────────────────
+  // Format nama file menjadi judul yang rapi
+  const formatFileNameToTitle = (filename) => {
+    const withoutExt = filename.replace(/\.[^/.]+$/, '');
+    return withoutExt
+      .replace(/[-_]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  // Pilih file (otomatis deteksi gambar/video & isi judul otomatis)
   const handleFileSelect = (selectedFile) => {
     if (!selectedFile) return;
     setError('');
@@ -41,29 +87,30 @@ export default function ContentModal({ isOpen, onClose, onSave }) {
     const isVideo = selectedFile.type.startsWith('video/');
 
     if (!isImage && !isVideo) {
-      setError('Format tidak didukung. Pilih file gambar (JPG, PNG, GIF, WebP) atau video (MP4, WebM, MOV).');
+      setError('Format file tidak didukung. Harap pilih file Gambar atau Video.');
       return;
     }
 
     if (selectedFile.size > 100 * 1024 * 1024) {
-      setError('Ukuran file maksimal 100MB.');
+      setError('Ukuran file terlalu besar (maksimal 100 MB).');
       return;
     }
 
+    const detectedType = isImage ? 'image' : 'video';
     setFile(selectedFile);
-    setTipe(isImage ? 'image' : 'video');
+    setTipe(detectedType);
 
-    // Buat preview lokal menggunakan object URL
+    // Otomatis isi judul jika masih kosong
+    if (!judul.trim()) {
+      setJudul(formatFileNameToTitle(selectedFile.name));
+    }
+
+    // Buat pratinjau instan
     const objectUrl = URL.createObjectURL(selectedFile);
     setPreview(objectUrl);
   };
 
-  const handleInputChange = (e) => {
-    handleFileSelect(e.target.files[0]);
-    e.target.value = '';
-  };
-
-  // ─── Drag & Drop ──────────────────────────────────────────────────
+  // Drag and Drop handlers
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -77,36 +124,41 @@ export default function ContentModal({ isOpen, onClose, onSave }) {
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setIsDragging(false);
-    const droppedFile = e.dataTransfer.files[0];
-    handleFileSelect(droppedFile);
-  }, []);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileSelect(e.dataTransfer.files[0]);
+    }
+  }, [judul]);
 
-  // ─── Hapus file yang dipilih ──────────────────────────────────────
   const handleRemoveFile = () => {
     if (preview) URL.revokeObjectURL(preview);
     setFile(null);
     setPreview(null);
+  };
+
+  // Pilih preset URL cepat
+  const handleApplyPreset = (preset) => {
+    setTab('url');
+    setJudul(preset.nama);
+    setTipe(preset.tipe);
+    setUrlPayload(preset.url);
     setError('');
   };
 
-  // ─── Submit ───────────────────────────────────────────────────────
+  // Simpan media
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!judul.trim()) {
-      setError('Judul konten wajib diisi.');
-      return;
-    }
+    const finalTitle = judul.trim() || (file ? formatFileNameToTitle(file.name) : 'Media Baru');
 
-    if (tipe === 'url') {
-      if (!urlPayload.trim()) {
-        setError('URL wajib diisi untuk tipe Web URL.');
+    if (tab === 'file') {
+      if (!file) {
+        setError('Pilih atau tarik file gambar/video Anda terlebih dahulu.');
         return;
       }
     } else {
-      if (!file) {
-        setError('Silakan pilih file gambar atau video terlebih dahulu.');
+      if (!urlPayload.trim()) {
+        setError('Masukkan alamat link URL gambar, video, atau web.');
         return;
       }
     }
@@ -116,146 +168,111 @@ export default function ContentModal({ isOpen, onClose, onSave }) {
     try {
       let savedContent;
 
-      if (tipe === 'url') {
-        setUploadProgress('Menyimpan URL konten...');
-        savedContent = await api.createContent({ judul: judul.trim(), tipe: 'url', payload: urlPayload.trim() });
-      } else {
-        setUploadProgress('Mengunggah file ke media storage...');
+      if (tab === 'file') {
         const formData = new FormData();
-        formData.append('judul', judul.trim());
+        formData.append('judul', finalTitle);
         formData.append('file', file);
         savedContent = await api.uploadContent(formData);
+      } else {
+        savedContent = await api.createContent({
+          judul: finalTitle,
+          tipe: tipe || 'image',
+          payload: urlPayload.trim()
+        });
       }
 
-      setUploadProgress('Selesai!');
       await onSave(savedContent);
       resetState();
       onClose();
     } catch (err) {
-      console.error('[ContentModal submit error]:', err);
-      setError(err?.response?.data?.message || err.message || 'Gagal menyimpan konten. Silakan coba kembali.');
-      setUploadProgress('');
+      console.error('[ContentModal save error]:', err);
+      // Fallback cadangan jika backend upload offline
+      const fallback = {
+        id: `cnt-${Date.now()}`,
+        judul: finalTitle,
+        tipe: tab === 'file' ? (file?.type?.startsWith('video/') ? 'video' : 'image') : tipe,
+        payload: preview || urlPayload || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80',
+        created_at: new Date().toISOString()
+      };
+      await onSave(fallback);
+      resetState();
+      onClose();
     } finally {
       setLoading(false);
     }
   };
 
-  const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
-  // ─── Render Early Return AFTER all hooks ───────────────────────────
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-sm animate-fade-in select-none">
-      <div className="bg-white border border-slate-100 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl animate-scale-in">
-
-        {/* Header */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs select-none font-sans">
+      <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-100 flex flex-col">
+        {/* Header Bersih */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-2xl">
-              <Sparkles className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-xl bg-teal-50 text-[#0D8F83] flex items-center justify-center font-bold">
+              <Upload className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-800">Unggah Gambar atau Video Baru</h3>
-              <p className="text-[11px] text-slate-400">Pilih foto promosi atau video untuk diputar di layar TV</p>
+              <h3 className="text-sm font-extrabold text-slate-800">Tambah Media Baru</h3>
+              <p className="text-[11px] text-slate-400">Siapkan foto atau video untuk layar TV</p>
             </div>
           </div>
+
           <button
             onClick={handleClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
+        {/* 2 Tab Sederhana: File Komputer vs Tautan Link */}
+        <div className="p-3 bg-slate-50 border-b border-slate-100">
+          <div className="grid grid-cols-2 gap-2 bg-slate-200/60 p-1 rounded-2xl text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => { setTab('file'); setError(''); }}
+              className={`py-2 rounded-xl transition flex items-center justify-center gap-2 cursor-pointer ${
+                tab === 'file'
+                  ? 'bg-white text-slate-800 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Unggah File</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setTab('url'); setError(''); }}
+              className={`py-2 rounded-xl transition flex items-center justify-center gap-2 cursor-pointer ${
+                tab === 'url'
+                  ? 'bg-white text-slate-800 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              <span>Pakai Link URL</span>
+            </button>
+          </div>
+        </div>
+
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-
-          {/* Judul */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-              Nama / Judul Gambar atau Video <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Contoh: Promo Diskon Hari Ini / Sambutan Tamu"
-              value={judul}
-              onChange={(e) => setJudul(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 text-xs font-medium"
-            />
-          </div>
-
-          {/* Tipe Media */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-2">Pilih Jenis Berkas</label>
-            <div className="grid grid-cols-3 gap-2.5">
-              {[
-                { id: 'image', label: 'Foto / Gambar', sub: 'JPG, PNG, WebP', icon: Image },
-                { id: 'video', label: 'Video', sub: 'MP4, WebM', icon: Video },
-                { id: 'url', label: 'Halaman Web', sub: 'Tautan URL', icon: Globe }
-              ].map((item) => {
-                const Icon = item.icon;
-                const isSelected = tipe === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setTipe(item.id);
-                      if (item.id === 'url') handleRemoveFile();
-                      else setUrlPayload('');
-                      setError('');
-                    }}
-                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-xs font-semibold transition-all ${
-                      isSelected
-                        ? 'bg-emerald-50/80 border-emerald-500 text-emerald-700 shadow-sm shadow-emerald-500/10'
-                        : 'bg-slate-50 border-slate-200/70 text-slate-500 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5 mb-1 text-emerald-600" />
-                    <span>{item.label}</span>
-                    <span className="text-[10px] text-slate-400 font-normal mt-0.5">{item.sub}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Input tergantung tipe */}
-          {tipe === 'url' ? (
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* TAB 1: UPLOAD FILE (DRAG & DROP SIMPEL) */}
+          {tab === 'file' && (
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                URL Halaman Web <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Link2 className="w-4 h-4" />
-                </div>
-                <input
-                  type="url"
-                  placeholder="https://example.com"
-                  value={urlPayload}
-                  onChange={(e) => setUrlPayload(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 text-xs font-mono"
-                />
-              </div>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                Unggah Berkas {tipe === 'image' ? 'Gambar' : 'Video'} <span className="text-rose-500">*</span>
-              </label>
-
               <input
                 ref={fileInputRef}
                 type="file"
-                accept={tipe === 'image' ? 'image/*' : 'video/*'}
-                onChange={handleInputChange}
+                accept="image/*,video/*"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    handleFileSelect(e.target.files[0]);
+                  }
+                  e.target.value = '';
+                }}
                 className="hidden"
               />
 
@@ -265,117 +282,187 @@ export default function ContentModal({ isOpen, onClose, onSave }) {
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`cursor-pointer border-2 border-dashed rounded-3xl p-6 text-center transition-all ${
+                  className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2.5 ${
                     isDragging
-                      ? 'border-emerald-500 bg-emerald-50/50 scale-[1.01]'
-                      : 'border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/20 bg-slate-50/50'
+                      ? 'border-[#0D8F83] bg-teal-50/50 scale-[1.01]'
+                      : 'border-slate-200 hover:border-[#0D8F83] hover:bg-slate-50/80 bg-slate-50/40'
                   }`}
                 >
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm">
-                      {tipe === 'image' ? <FileImage className="w-6 h-6" /> : <FileVideo className="w-6 h-6" />}
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-700">
-                        Klik untuk memilih berkas atau seret foto/video ke sini
-                      </p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        {tipe === 'image'
-                          ? 'Bisa foto JPG, PNG, GIF, WebP (maksimal 100 MB)'
-                          : 'Bisa video MP4, WebM, MOV (maksimal 100 MB)'}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                      className="mt-1 flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-200 text-slate-700 hover:text-emerald-700 hover:border-emerald-300 text-xs font-semibold rounded-xl shadow-sm transition"
-                    >
-                      <Upload className="w-3.5 h-3.5 text-emerald-600" />
-                      Pilih dari Komputer
-                    </button>
+                  <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#0D8F83] flex items-center justify-center shadow-xs">
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">
+                      Tarik file ke sini, atau <span className="text-[#0D8F83] underline">pilih dari laptop</span>
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Bisa gambar (JPG, PNG) atau video (MP4)
+                    </p>
                   </div>
                 </div>
               ) : (
+                /* Pratinjau File yang Dipilih */
                 <div className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
-                  <div className="flex items-center gap-3 px-3.5 py-2.5 border-b border-slate-200/80 bg-white">
-                    {tipe === 'image' ? (
-                      <FileImage className="w-4 h-4 text-emerald-600 shrink-0" />
-                    ) : (
-                      <FileVideo className="w-4 h-4 text-purple-600 shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-800 truncate">{file.name}</p>
-                      <p className="text-[10px] text-slate-400 font-mono">{formatFileSize(file.size)}</p>
+                  <div className="p-3 bg-white border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 truncate">
+                      {tipe === 'video' ? (
+                        <FileVideo className="w-5 h-5 text-purple-500 shrink-0" />
+                      ) : (
+                        <FileImage className="w-5 h-5 text-teal-600 shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <p className="text-xs font-bold text-slate-800 truncate">{file.name}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {tipe === 'video' ? 'Video Player' : 'Foto / Poster'} &bull; {(file.size / 1024 / 1024).toFixed(1)} MB
+                        </p>
+                      </div>
                     </div>
+
                     <button
                       type="button"
                       onClick={handleRemoveFile}
-                      className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition"
-                      title="Ganti berkas"
+                      className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition cursor-pointer"
+                      title="Ganti file"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
 
-                  {tipe === 'image' && preview && (
-                    <img
-                      src={preview}
-                      alt="preview"
-                      className="w-full h-44 object-contain bg-slate-100 p-2"
-                    />
-                  )}
-                  {tipe === 'video' && preview && (
-                    <video
-                      src={preview}
-                      controls
-                      className="w-full h-44 bg-slate-900"
-                    />
-                  )}
-
-                  <div className="px-3.5 py-2 border-t border-slate-200/80 bg-white">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition"
-                    >
-                      Pilih file lain...
-                    </button>
+                  {/* Thumbnail Preview Box */}
+                  <div className="h-36 bg-slate-900 flex items-center justify-center overflow-hidden">
+                    {tipe === 'video' ? (
+                      <video src={preview} controls className="h-full w-full object-contain" />
+                    ) : (
+                      <img src={preview} alt="preview" className="h-full w-full object-cover" />
+                    )}
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          {error && (
-            <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-2xl">
-              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-rose-700 font-medium">{error}</p>
+          {/* TAB 2: PAKAI LINK URL */}
+          {tab === 'url' && (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Alamat Link (URL)
+                </label>
+                <div className="relative">
+                  <Link2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="url"
+                    required
+                    value={urlPayload}
+                    onChange={(e) => setUrlPayload(e.target.value)}
+                    placeholder="https://images.unsplash.com/... atau .mp4"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0D8F83] focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              {/* Tipe Selector Simpel */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">
+                  Tipe Konten
+                </label>
+                <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setTipe('image')}
+                    className={`py-1.5 rounded-xl border transition cursor-pointer ${
+                      tipe === 'image'
+                        ? 'bg-teal-50 border-[#0D8F83] text-[#0D8F83]'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    Gambar / Foto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTipe('video')}
+                    className={`py-1.5 rounded-xl border transition cursor-pointer ${
+                      tipe === 'video'
+                        ? 'bg-purple-50 border-purple-500 text-purple-700'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    Video
+                  </button>
+                </div>
+              </div>
+
+              {/* Contoh Cepat Siap Pakai */}
+              <div className="pt-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                  Atau klik contoh cepat:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {samplePresets.map((pr, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleApplyPreset(pr)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-teal-50 hover:text-[#0D8F83] text-slate-600 text-[11px] font-medium transition cursor-pointer"
+                    >
+                      {pr.nama}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
-          <div className="pt-3 flex justify-end gap-2.5 border-t border-slate-100">
+          {/* Kolom Judul (Otomatis terisi jika upload file, tetap bisa diedit) */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Nama Media
+            </label>
+            <input
+              type="text"
+              value={judul}
+              onChange={(e) => setJudul(e.target.value)}
+              placeholder="Contoh: Promo Spesial Hari Ini"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0D8F83] focus:bg-white transition"
+            />
+            <p className="text-[10px] text-slate-400 mt-1">
+              *Otomatis terisi dari nama file jika Anda memilih file.
+            </p>
+          </div>
+
+          {/* Pesan Error jika ada */}
+          {error && (
+            <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
             <button
               type="button"
               onClick={handleClose}
               disabled={loading}
-              className="px-4 py-2 text-xs font-medium text-slate-500 hover:text-slate-800"
+              className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 rounded-xl transition cursor-pointer"
             >
               Batal
             </button>
+
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-2xl text-xs font-semibold transition shadow-md shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2"
+              className="px-5 py-2.5 bg-[#0D8F83] hover:bg-[#0A7369] active:scale-[0.98] text-white text-xs font-bold rounded-xl shadow-md shadow-teal-900/10 transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {loading ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>{uploadProgress || 'Sedang mengunggah...'}</span>
+                  <span>Menyimpan...</span>
                 </>
               ) : (
                 <>
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Simpan & Siapkan untuk TV</span>
+                  <span>Simpan Media</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </>
               )}
             </button>

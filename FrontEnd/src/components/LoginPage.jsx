@@ -67,8 +67,8 @@ export default function LoginPage({ onLoginSuccess, onGuestAccess }) {
       {/* ── Main Dual-Card Authentication Container ── */}
       <div className="relative z-10 w-full max-w-4xl bg-white rounded-3xl shadow-2xl shadow-teal-950/10 border border-slate-200/80 overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[540px]">
         
-        {/* ── Left Column: Brand Hero (5 cols) ── */}
-        <div className="md:col-span-5 bg-gradient-to-br from-[#0F8A7E] via-[#0D8F83] to-[#0A7369] p-8 sm:p-10 text-white flex flex-col justify-between relative overflow-hidden">
+        {/* ── Left Column: Brand Hero (5 cols - visible on tablet & desktop) ── */}
+        <div className="hidden md:flex md:col-span-5 bg-gradient-to-br from-[#0F8A7E] via-[#0D8F83] to-[#0A7369] p-8 sm:p-10 text-white flex-col justify-between relative overflow-hidden">
           {/* Subtle architectural contour lines */}
           <svg
             className="absolute -bottom-12 -left-12 w-80 h-80 opacity-[0.08] pointer-events-none"
@@ -140,8 +140,22 @@ export default function LoginPage({ onLoginSuccess, onGuestAccess }) {
         </div>
 
         {/* ── Right Column: Standard Login Form (7 cols) ── */}
-        <div className="md:col-span-7 p-8 sm:p-10 flex flex-col justify-between bg-white">
+        <div className="md:col-span-7 p-6 sm:p-10 flex flex-col justify-between bg-white">
           <div>
+            {/* Mobile Brand Header */}
+            <div className="md:hidden flex items-center gap-2.5 mb-6 pb-4 border-b border-slate-100">
+              <div className="w-10 h-10 rounded-xl bg-[#0D8F83] text-amber-300 flex items-center justify-center shadow-xs">
+                <Tv className="w-5 h-5" />
+              </div>
+              <div className="leading-tight">
+                <h2 className="font-extrabold text-base text-slate-800 flex items-center gap-1.5">
+                  MJ Signage
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                </h2>
+                <p className="text-xs text-[#0D8F83] font-medium">Digital Display CMS</p>
+              </div>
+            </div>
+
             {/* Header */}
             <div className="mb-6">
               <h3 className="text-2xl font-black text-slate-800 tracking-tight">
