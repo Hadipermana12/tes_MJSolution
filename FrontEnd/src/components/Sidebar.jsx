@@ -15,6 +15,7 @@ import {
   Layers,
   ChevronRight
 } from 'lucide-react';
+import { Link } from '../router.jsx';
 
 export default function Sidebar({
   currentView,
@@ -32,6 +33,7 @@ export default function Sidebar({
   const menuItems = [
     {
       id: 'dashboard',
+      path: '/dashboard',
       label: 'Ringkasan',
       icon: LayoutDashboard,
       badge: null,
@@ -42,6 +44,7 @@ export default function Sidebar({
     },
     {
       id: 'devices',
+      path: '/devices',
       label: 'Layar TV',
       icon: Monitor,
       badge: devicesCount,
@@ -52,6 +55,7 @@ export default function Sidebar({
     },
     {
       id: 'media',
+      path: '/media',
       label: 'Koleksi Media',
       icon: Film,
       badge: contentsCount,
@@ -62,6 +66,7 @@ export default function Sidebar({
     },
     {
       id: 'playlists',
+      path: '/playlists',
       label: 'Playlist',
       icon: ListMusic,
       badge: playlistsCount,
@@ -72,6 +77,7 @@ export default function Sidebar({
     },
     {
       id: 'schedule',
+      path: '/schedule',
       label: 'Jadwal Siar',
       icon: Calendar,
       badge: 'Auto',
@@ -82,6 +88,7 @@ export default function Sidebar({
     },
     {
       id: 'groups',
+      path: '/groups',
       label: 'Zona Ruangan',
       icon: Building2,
       badge: null,
@@ -92,6 +99,7 @@ export default function Sidebar({
     },
     {
       id: 'client',
+      path: '/player',
       label: 'Tonton di TV',
       icon: Tv,
       badge: 'Live',
@@ -147,8 +155,13 @@ export default function Sidebar({
         <div>
           {/* ── Brand Logo Header with Glassmorphism ── */}
           <div className="pt-6 pb-4 px-5">
-            <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-md shadow-black/5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 via-emerald-300 to-teal-200 p-[2px] shadow-sm shrink-0">
+            <Link
+              to="/dashboard"
+              onClick={() => setCurrentView('dashboard')}
+              className="p-3 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/20 shadow-md shadow-black/5 flex items-center gap-3 transition cursor-pointer group"
+              title="Kembali ke Ringkasan CMS"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 via-emerald-300 to-teal-200 p-[2px] shadow-sm shrink-0 group-hover:scale-105 transition-transform">
                 <div className="w-full h-full bg-[#0D8F83] rounded-[10px] flex items-center justify-center">
                   <Tv className="w-5 h-5 text-amber-300" />
                 </div>
@@ -165,7 +178,7 @@ export default function Sidebar({
                   Smart Digital CMS
                 </p>
               </div>
-            </div>
+            </Link>
           </div>
 
           {/* ── Section Label ── */}
@@ -193,31 +206,58 @@ export default function Sidebar({
                       <path d="M20 0 v20 h-20 A 20 20 0 0 0 20 0 Z" />
                     </svg>
 
-                    {/* Active Tab Body */}
-                    <button
-                      onClick={() => setCurrentView(item.id)}
-                      className="relative z-10 w-full flex items-center justify-between pl-4 pr-4 py-2.5 bg-white text-slate-800 font-bold text-xs rounded-l-3xl shadow-xs text-left transition-all cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3 truncate">
-                        {/* Colorful Gradient Icon Tile */}
-                        <div
-                          className={`w-8 h-8 rounded-xl bg-gradient-to-br ${item.gradient} text-white flex items-center justify-center shadow-md ${item.shadow} shrink-0`}
-                        >
-                          <Icon className="w-4 h-4 text-white" />
+                    {/* Active Tab Body with Link Route */}
+                    {item.path ? (
+                      <Link
+                        to={item.path}
+                        onClick={() => setCurrentView(item.id)}
+                        className="relative z-10 w-full flex items-center justify-between pl-4 pr-4 py-2.5 bg-white text-slate-800 font-bold text-xs rounded-l-3xl shadow-xs text-left transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 truncate">
+                          {/* Colorful Gradient Icon Tile */}
+                          <div
+                            className={`w-8 h-8 rounded-xl bg-gradient-to-br ${item.gradient} text-white flex items-center justify-center shadow-md ${item.shadow} shrink-0`}
+                          >
+                            <Icon className="w-4 h-4 text-white" />
+                          </div>
+                          <span className="truncate tracking-wide text-slate-800 font-bold text-xs">
+                            {item.label}
+                          </span>
                         </div>
-                        <span className="truncate tracking-wide text-slate-800 font-bold text-xs">
-                          {item.label}
-                        </span>
-                      </div>
 
-                      {item.badge !== null && item.badge !== undefined && (
-                        <span
-                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${item.badgeColor}`}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
-                    </button>
+                        {item.badge !== null && item.badge !== undefined && (
+                          <span
+                            className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${item.badgeColor}`}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => setCurrentView(item.id)}
+                        className="relative z-10 w-full flex items-center justify-between pl-4 pr-4 py-2.5 bg-white text-slate-800 font-bold text-xs rounded-l-3xl shadow-xs text-left transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 truncate">
+                          <div
+                            className={`w-8 h-8 rounded-xl bg-gradient-to-br ${item.gradient} text-white flex items-center justify-center shadow-md ${item.shadow} shrink-0`}
+                          >
+                            <Icon className="w-4 h-4 text-white" />
+                          </div>
+                          <span className="truncate tracking-wide text-slate-800 font-bold text-xs">
+                            {item.label}
+                          </span>
+                        </div>
+
+                        {item.badge !== null && item.badge !== undefined && (
+                          <span
+                            className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${item.badgeColor}`}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                      </button>
+                    )}
 
                     {/* Bottom Concave Curve */}
                     <svg
@@ -232,34 +272,57 @@ export default function Sidebar({
 
               return (
                 <div key={item.id} className="pl-3 pr-3">
-                  <button
-                    onClick={() => (item.isAction ? item.action() : setCurrentView(item.id))}
-                    className="w-full flex items-center justify-between px-3 py-2 text-teal-100 hover:text-white hover:bg-white/10 rounded-2xl text-xs font-semibold transition-all text-left group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3 truncate">
-                      {/* Colorful Gradient Icon Tile on Inactive Item */}
-                      <div
-                        className={`w-8 h-8 rounded-xl bg-gradient-to-br ${item.gradient} text-white flex items-center justify-center shadow-sm opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all shrink-0`}
-                      >
-                        <Icon className="w-4 h-4 text-white" />
+                  {item.isAction ? (
+                    <button
+                      onClick={item.action}
+                      className="w-full flex items-center justify-between px-3 py-2 text-teal-100 hover:text-white hover:bg-white/10 rounded-2xl text-xs font-semibold transition-all text-left group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        <div
+                          className={`w-8 h-8 rounded-xl bg-gradient-to-br ${item.gradient} text-white flex items-center justify-center shadow-sm opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all shrink-0`}
+                        >
+                          <Icon className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="truncate tracking-wide text-teal-50 group-hover:text-white font-medium">
+                          {item.label}
+                        </span>
                       </div>
-                      <span className="truncate tracking-wide text-teal-50 group-hover:text-white font-medium">
-                        {item.label}
-                      </span>
-                    </div>
 
-                    {item.badge !== null && item.badge !== undefined && (
-                      <span
-                        className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full ${
-                          item.isAction
-                            ? 'bg-pink-400/30 text-pink-100 font-bold border border-pink-300/30'
-                            : 'bg-white/15 text-teal-100'
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
+                      {item.badge !== null && item.badge !== undefined && (
+                        <span
+                          className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-pink-400/30 text-pink-100 font-bold border border-pink-300/30"
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  ) : (
+                    <Link
+                      to={item.path || '/dashboard'}
+                      onClick={() => setCurrentView(item.id)}
+                      className="w-full flex items-center justify-between px-3 py-2 text-teal-100 hover:text-white hover:bg-white/10 rounded-2xl text-xs font-semibold transition-all text-left group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        {/* Colorful Gradient Icon Tile on Inactive Item */}
+                        <div
+                          className={`w-8 h-8 rounded-xl bg-gradient-to-br ${item.gradient} text-white flex items-center justify-center shadow-sm opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all shrink-0`}
+                        >
+                          <Icon className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="truncate tracking-wide text-teal-50 group-hover:text-white font-medium">
+                          {item.label}
+                        </span>
+                      </div>
+
+                      {item.badge !== null && item.badge !== undefined && (
+                        <span
+                          className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-white/15 text-teal-100"
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  )}
                 </div>
               );
             })}
@@ -292,14 +355,15 @@ export default function Sidebar({
                 {onlineDevicesCount > 0 ? `${onlineDevicesCount} Layar Siap Siar` : 'Standby Mode'}
               </span>
 
-              <button
+              <Link
+                to="/player"
                 onClick={() => setCurrentView('client')}
                 className="text-[10px] font-bold text-amber-300 hover:text-white transition flex items-center gap-1 cursor-pointer"
                 title="Buka Player Fullscreen"
               >
                 <span>Live TV</span>
                 <ExternalLink className="w-3 h-3 text-amber-300" />
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -333,12 +397,13 @@ export default function Sidebar({
                 <LogOut className="w-4 h-4" />
               </button>
             ) : (
-              <button
+              <Link
+                to="/login"
                 onClick={onOpenAuthModal}
                 className="px-2.5 py-1 rounded-xl bg-white text-[#0D8F83] hover:bg-teal-50 text-[11px] font-bold transition shadow-xs cursor-pointer"
               >
                 Masuk
-              </button>
+              </Link>
             )}
           </div>
         </div>

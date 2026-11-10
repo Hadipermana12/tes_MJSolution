@@ -15,12 +15,40 @@ import AlertModal from './components/AlertModal';
 import TickerSettingsModal from './components/TickerSettingsModal';
 import DeviceClientView from './components/DeviceClientView';
 import LoginPage from './components/LoginPage';
+import { useRouter } from './router.jsx';
 import { api, apiClient } from './services/api';
 import { wsService } from './services/websocket';
 
 function App() {
+  const { path, navigate } = useRouter();
+
+  // Helper konversi path URL <-> view module CMS
+  const pathToView = (pathname) => {
+    if (pathname === '/login') return 'login';
+    if (pathname === '/devices') return 'devices';
+    if (pathname === '/media') return 'media';
+    if (pathname === '/playlists') return 'playlists';
+    if (pathname === '/schedule') return 'schedule';
+    if (pathname === '/groups') return 'groups';
+    if (pathname.startsWith('/player') || pathname === '/client') return 'client';
+    return 'dashboard';
+  };
+
+  const viewToPath = (view) => {
+    switch (view) {
+      case 'devices': return '/devices';
+      case 'media': return '/media';
+      case 'playlists': return '/playlists';
+      case 'schedule': return '/schedule';
+      case 'groups': return '/groups';
+      case 'client': return '/player';
+      case 'login': return '/login';
+      default: return '/dashboard';
+    }
+  };
+
   // CMS Module Views: 'dashboard' | 'media' | 'playlists' | 'schedule' | 'groups' | 'devices' | 'client'
-  const [currentView, setCurrentView] = useState('dashboard');
+  const [currentView, setCurrentView] = useState(() => pathToView(window.location.pathname));
   const [devices, setDevices] = useState([]);
   const [contents, setContents] = useState([]);
   const [playlists, setPlaylists] = useState([]);
@@ -29,6 +57,27 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
+
+  // Sinkronisasi otomatis bila URL browser berubah via Back / Forward (popstate)
+  useEffect(() => {
+    const targetView = pathToView(path);
+    if (targetView !== currentView && targetView !== 'login') {
+      setCurrentView(targetView);
+    }
+    // Jika path /player/:deviceId, pasang device aktif yang sesuai
+    if (path.startsWith('/player/')) {
+      const devId = path.replace('/player/', '');
+      const found = devices.find((d) => d.id === devId);
+      if (found) setActivePlayerDevice(found);
+    }
+  }, [path, devices]);
+
+  // Handler pergantian tampilan yang otomatis mengubah URL rute browser
+  const handleViewChange = (view, targetPath = null) => {
+    setCurrentView(view);
+    const destination = targetPath || viewToPath(view);
+    navigate(destination);
+  };
 
   // ── Running Text Ticker State ───────────────────────────────────────
   const [runningTicker, setRunningTicker] = useState({
@@ -395,14 +444,17 @@ function App() {
 
   // ── OPEN SIGNAGE PLAYER VIEW ────────────────────────────────────────
   const handleOpenClientView = (device) => {
-    setActivePlayerDevice(device || devices[0]);
+    const dev = device || devices[0];
+    setActivePlayerDevice(dev);
     setCurrentView('client');
+    navigate(dev?.id ? `/player/${dev.id}` : '/player');
   };
 
   const handleLogout = () => {
     api.logout();
     setCurrentUser(null);
     setIsGuest(false);
+    navigate('/login');
     showAlert({
       type: 'info',
       title: 'Berhasil Keluar',
@@ -410,14 +462,17 @@ function App() {
     });
   };
 
-  // ── Protected Route: Tampilkan LoginPage jika belum login dan bukan mode guest ──
-  if (authChecked && !currentUser && !isGuest) {
+  // ── Protected Route: Tampilkan LoginPage jika di route /login atau belum login dan bukan mode guest ──
+  const isLoginPage = path === '/login' || (authChecked && !currentUser && !isGuest);
+
+  if (isLoginPage) {
     return (
       <>
         <LoginPage
           onLoginSuccess={(user) => {
             setCurrentUser(user);
             fetchData();
+            handleViewChange('dashboard');
             showAlert({
               type: 'success',
               title: `Selamat Datang, ${user.username}!`,
@@ -426,6 +481,7 @@ function App() {
           }}
           onGuestAccess={() => {
             setIsGuest(true);
+            handleViewChange('dashboard');
             showAlert({
               type: 'info',
               title: 'Mode Pratinjau Tamu',
@@ -448,7 +504,7 @@ function App() {
       <DeviceClientView
         devices={devices}
         activeDevice={activePlayerDevice || devices[0]}
-        onBackToDashboard={() => setCurrentView('dashboard')}
+        onBackToDashboard={() => handleViewChange('dashboard')}
         runningTicker={runningTicker}
       />
     );
@@ -459,10 +515,10 @@ function App() {
       {/* ── Left Modern CMS Sidebar (Fixed Independent Scroll) ── */}
       <Sidebar
         currentView={currentView}
-        setCurrentView={setCurrentView}
+        setCurrentView={handleViewChange}
         isWsConnected={isWsConnected}
         currentUser={currentUser}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onOpenAuthModal={() => handleViewChange('login', '/login')}
         onLogout={handleLogout}
         onOpenTickerModal={() => setIsTickerModalOpen(true)}
         devicesCount={devices.length}
@@ -499,7 +555,7 @@ function App() {
               onOpenTickerModal={() => setIsTickerModalOpen(true)}
               onOpenClientView={handleOpenClientView}
               onOpenPushModal={handleOpenPushModal}
-              setCurrentView={setCurrentView}
+              setCurrentView={handleViewChange}
               showTable={true}
               onOpenEditDevice={handleOpenEditDevice}
               onDeleteDevice={handleDeleteDevice}

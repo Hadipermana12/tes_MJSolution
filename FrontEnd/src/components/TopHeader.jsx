@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Home
 } from 'lucide-react';
+import { Link } from '../router.jsx';
 
 export default function TopHeader({
   currentView,
@@ -83,12 +84,23 @@ export default function TopHeader({
 
   return (
     <header className="h-16 bg-white/95 backdrop-blur-md border-b border-slate-100 px-6 flex items-center justify-between select-none sticky top-0 z-30 shrink-0">
-      {/* ── Standard CMS Breadcrumb ── */}
+      {/* ── Standard CMS Breadcrumb with Active Route Links ── */}
       <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-        <Home className="w-3.5 h-3.5 text-slate-400" />
-        <span>CMS</span>
+        <Link
+          to="/dashboard"
+          className="flex items-center gap-1.5 text-slate-400 hover:text-[#0D8F83] transition"
+          title="Beranda CMS"
+        >
+          <Home className="w-3.5 h-3.5" />
+          <span className="font-semibold text-slate-600 hover:text-[#0D8F83]">CMS</span>
+        </Link>
         <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
-        <span className="text-slate-500">{meta.section}</span>
+        <Link
+          to="/dashboard"
+          className="text-slate-500 hover:text-[#0D8F83] transition"
+        >
+          {meta.section}
+        </Link>
         <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
         <span className="font-bold text-slate-800">{meta.title}</span>
       </div>
